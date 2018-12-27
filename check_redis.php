@@ -70,11 +70,15 @@ for($i = 1; $i < count($argv); $i++)
 }
 
 if(!$mode)
-	die("UNKNOWN - Mode is not set\n");
+{
+	echo("UNKNOWN - Mode is not set\n");
+	exit(3);
+}
 
 if( $warning > $critical )
 {
-	die("UNKNOWN - warning ($warning) can't be greater than critical ($critical)\n");
+	echo("UNKNOWN - warning ($warning) can't be greater than critical ($critical)\n");
+	exit(3);
 }
 
 
@@ -82,14 +86,20 @@ $redis = new Redis();
 $status = @$redis->connect($host, $port);
 
 if( !$status )
-	die("CRITICAL - could not connect to redis $host:$port\n");
+{
+	echo("CRITICAL - could not connect to redis $host:$port\n");
+	exit(2);
+}
 
 if( $auth )
 {
 	$status = $redis->auth($auth);
 
 	if( !$status )
-		die("CRITICAL - auth fail\n");
+	{
+		echo("CRITICAL - auth fail\n");
+		exit(2);
+	}
 }
 
 
@@ -108,7 +118,8 @@ try{
 }
 catch(RedisException $e)
 {
-	die("CRITICAL - ".$e->getMessage()."\n");
+	echo("CRITICAL - ".$e->getMessage()."\n");
+	exit(2);
 }
 
 	
@@ -125,26 +136,45 @@ foreach ($status as $s) {
 	{
 		$s[1] = trim($s[1]);
 		if( $critical && $s[0] === 'connected_clients' && $critical < (int)$s[1] )
-			die("CRITICAL - connected_clients {$s[1]} greater then {$critical}\n");
+		{
+			echo("CRITICAL - connected_clients {$s[1]} greater then {$critical}\n");
+			exit(2);
+		}
 
 		if( $warning && $s[0] === 'connected_clients' && $warning < (int)$s[1] )
-			die("WARNING - connected_clients {$s[1]} greater then {$warning}\n");
+		{
+			echo("WARNING - connected_clients {$s[1]} greater then {$warning}\n");
+			exit(1);
+		}
 
 		if( $s[0] === 'connected_clients' )
-			die("OK - connected_clients {$s[1]}\n");
+		{
+			echo("OK - connected_clients {$s[1]}\n");
+			exit(0);
+		}
 	}
 
 	if($mode === 2)
 	{
 		if( $critical && $s[0] === 'used_memory' && $critical * $gigabite < (int)$s[1])
-			die("CRITICAL - used_memory ".number_format(((int)$s[1]/$gigabite),2)."G greater then {$critical}G\n");
+		{
+			echo("CRITICAL - used_memory ".number_format(((int)$s[1]/$gigabite),2)."G greater then {$critical}G\n");
+			exit(2);
+		}
 
 		if( $warning && $s[0] === 'used_memory' && $warning * $gigabite < (int)$s[1])
-			die("WARNING - used_memory ".number_format(((int)$s[1]/$gigabite),2)."G greater then {$warning}G\n");
+		{
+			echo("WARNING - used_memory ".number_format(((int)$s[1]/$gigabite),2)."G greater then {$warning}G\n");
+			exit(1);
+		}
 
 		if( $s[0] === 'used_memory_human' )
-			die("OK - used_memory {$s[1]}\n");
+		{
+			echo("OK - used_memory {$s[1]}\n");
+			exit(0);
+		}
 	}
 }
 
-die("UNKNOWN - Mode is not set\n");
+echo("UNKNOWN - Mode is not set\n");
+exit(3);
